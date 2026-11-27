@@ -1,4 +1,6 @@
 export const bit = i => 1 << i;
+// Core of the published 24-vertex example, in its original labelling.
+export const referenceCore = [[4,5],[3,7],[0,6],[2,4],[2,7],[1,6],[0,1],[3,5]];
 export function size(mask) {
   let n = 0;
   while (mask) { mask &= mask - 1; ++n; }

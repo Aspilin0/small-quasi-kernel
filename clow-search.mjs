@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { inspect } from './clow-check.mjs';
 
-import { allCores, attachments, bit, indices, size } from './clow-cores.mjs';
+import { allCores, attachments, bit, indices, referenceCore as reference, size } from './clow-cores.mjs';
 
 function search(generate) {
   let cores = 0, graphs = 0, minimum = Infinity, best;
@@ -32,7 +32,6 @@ function search(generate) {
   return { cores, graphs, minimum, best };
 }
 
-const reference = [[4,5],[3,7],[0,6],[2,4],[2,7],[1,6],[0,1],[3,5]];
 const degreeFour = reference.map((row,i) => [...row,8+2*i,9+2*i]).concat(Array.from({length:16}, () => []));
 assert.ok(inspect(degreeFour, 4).every(row => row.gap === 0));
 const fixed = search(visit => visit(reference.map(row => row.reduce((m,v) => m | bit(v), 0))));
