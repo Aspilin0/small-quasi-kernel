@@ -1,8 +1,8 @@
-﻿/-!
+/-!
 # Clow 猜想 5.1：Lean 4 复核（仅用核心库，无需 Mathlib）
 
-对应 `Clow-5.1-构造.md`：
-* 定义 S(v)、E(v)、g(v)，与 `clow-check.mjs` 的定义逐行对应；
+对应 `../history/Clow-5.1-构造.md`：
+* 定义 S(v)、E(v)、g(v)，与 `../experiments/shared/clow-check.mjs` 的定义逐行对应；
 * 合格图条件（非空、无源、无自环、无双向边、出度上界）；
 * 环族（m = 3..40）中恰有一个点 g > 0，且全图差值之和为 3 - m；
 * 最大出度 4 的 24 点图每点 g = 0；
@@ -119,9 +119,9 @@ def prefixUsed (l : List Nat) : Bool :=
 
 def attach (rows : List (List Nat)) (l : List Nat) : Graph :=
   let top := l.foldl max 0
-  ((List.range 3).map fun v =>
-      rows.getD v [] ++ (if l.getD v 0 == 0 then [] else [2 + l.getD v 0])) .toArray
-    ++ (List.replicate top ([] : List Nat)).toArray
+  let core := (List.range 3).map fun v =>
+    rows.getD v [] ++ (if l.getD v 0 == 0 then [] else [2 + l.getD v 0])
+  core.toArray ++ (List.replicate top ([] : List Nat)).toArray
 
 /-- 全部合格接法下的最少正值点数。 -/
 def coreMin : Nat :=
