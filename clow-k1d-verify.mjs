@@ -1,114 +1,12 @@
 import assert from 'node:assert/strict';
+import { verifySmallQuasiKernel } from './check.mjs';
+import { exactLstar as enumerateLstar, findLemmaA, inducedAlpha, inspectGPlus, isOriented } from './clow-local.mjs';
 
-// General exact computation of L*(v) = min_{F subset S(v)} (|A(v) U N+(F)| - |F|)
-// without degree-3 |S(v)| <= 9 restriction.
+export { inducedAlpha, inspectGPlus, isOriented, verifySmallQuasiKernel };
+
 export function exactLstar(adj, v) {
-  const n = adj.length;
   if (adj[v].length === 0) return { gap: 0, F: [], S: [] };
-  const del = new Uint8Array(n);
-  del[v] = 1;
-  for (const a of adj[v]) del[a] = 1;
-  const hasParent = new Uint8Array(n);
-  for (let u = 0; u < n; ++u) if (!del[u]) for (const w of adj[u]) hasParent[w] = 1;
-  const S = [];
-  for (let u = 0; u < n; ++u) if (!del[u] && !hasParent[u]) S.push(u);
-  const k = S.length;
-  assert.ok(k <= 22, `|S(v)|=${k} exceeds brute-force subset cap`);
-  let bestGap = Infinity, bestF = [];
-  for (let mask = 0; mask < (1 << k); ++mask) {
-    const E = new Set(adj[v]);
-    let fSize = 0;
-    for (let i = 0; i < k; ++i) {
-      if (mask & (1 << i)) {
-        ++fSize;
-        for (const w of adj[S[i]]) E.add(w);
-      }
-    }
-    const gap = E.size - fSize;
-    if (gap < bestGap || (gap === bestGap && fSize < bestF.length)) {
-      bestGap = gap;
-      bestF = [];
-      for (let i = 0; i < k; ++i) if (mask & (1 << i)) bestF.push(S[i]);
-    }
-  }
-  return { gap: bestGap, F: bestF, S };
-}
-
-// Independent validator for sourceless simple digraphs (2-cycles allowed, arbitrary out-degree).
-export function inspectGPlus(adj) {
-  const n = adj.length;
-  assert.ok(n > 0);
-  const indeg = new Int32Array(n);
-  for (let u = 0; u < n; ++u) {
-    assert.equal(new Set(adj[u]).size, adj[u].length, `Duplicate out-neighbor at ${u}`);
-    for (const w of adj[u]) {
-      assert.ok(Number.isInteger(w) && w >= 0 && w < n && w !== u);
-      ++indeg[w];
-    }
-  }
-  for (let u = 0; u < n; ++u) assert.ok(indeg[u] >= 1, `Vertex ${u} is a source`);
-  return adj.map((row, v) => {
-    const del = new Uint8Array(n);
-    del[v] = 1;
-    for (const a of row) del[a] = 1;
-    const hasParent = new Uint8Array(n);
-    for (let u = 0; u < n; ++u) if (!del[u]) for (const w of adj[u]) hasParent[w] = 1;
-    const S = [];
-    for (let u = 0; u < n; ++u) if (!del[u] && !hasParent[u]) S.push(u);
-    const E = new Set(row);
-    let sHitsV = false;
-    for (const s of S) for (const w of adj[s]) { E.add(w); if (w === v) sHitsV = true; }
-    const g = E.size - S.length;
-    return { v, S, E: [...E], g, gPlus: g + (sHitsV ? 1 : 0), sHitsV };
-  });
-}
-
-// Independent verifier of independence, 2-step reachability, and 2|Q| <= |V|.
-export function verifySmallQuasiKernel(adj, Q) {
-  const n = adj.length;
-  const qSet = new Set(Q);
-  assert.equal(qSet.size, Q.length, 'Duplicate vertex in Q');
-  assert.ok(2 * Q.length <= n, `Quasi-kernel too large: 2*${Q.length} > ${n}`);
-  for (const u of Q) {
-    assert.ok(Number.isInteger(u) && u >= 0 && u < n);
-    for (const w of adj[u]) assert.ok(!qSet.has(w), `Arc ${u}->${w} inside Q`);
-  }
-  const dist = new Int8Array(n).fill(3);
-  for (const u of Q) dist[u] = 0;
-  for (const u of Q) {
-    for (const w of adj[u]) {
-      if (dist[w] > 1) dist[w] = 1;
-      for (const x of adj[w]) if (dist[x] > 2) dist[x] = 2;
-    }
-  }
-  for (let u = 0; u < n; ++u) assert.ok(dist[u] <= 2, `Vertex ${u} not reached in <= 2 steps`);
-}
-
-// Exact independence number alpha(D[verts]) of the induced subdigraph on `verts`.
-export function inducedAlpha(adj, verts) {
-  const k = verts.length;
-  if (k <= 1) return k;
-  const conn = Array.from({ length: k }, () => new Uint8Array(k));
-  const pos = new Map(verts.map((v, i) => [v, i]));
-  for (let i = 0; i < k; ++i) {
-    for (const w of adj[verts[i]]) {
-      const j = pos.get(w);
-      if (j !== undefined && j !== i) { conn[i][j] = 1; conn[j][i] = 1; }
-    }
-  }
-  let best = 1;
-  const chosen = [];
-  function bt(start) {
-    if (chosen.length > best) best = chosen.length;
-    if (chosen.length + (k - start) <= best) return;
-    for (let i = start; i < k; ++i) {
-      let ok = true;
-      for (const c of chosen) if (conn[i][c]) { ok = false; break; }
-      if (ok) { chosen.push(i); bt(i + 1); chosen.pop(); }
-    }
-  }
-  bt(0);
-  return best;
+  return enumerateLstar(adj, v);
 }
 
 export function maxOutAlpha(adj) {
@@ -120,31 +18,11 @@ export function maxOutAlpha(adj) {
   return mx;
 }
 
-export function isOriented(adj) {
-  for (let u = 0; u < adj.length; ++u) {
-    for (const w of adj[u]) if (adj[w].includes(u)) return false;
-  }
-  return true;
-}
-
-// Check whether Lemma A (subsumed indegree-1 / bidirected-in-neighbor child reduction) applies.
 export function findLemmaAReduction(adj) {
-  const n = adj.length;
-  for (let y = 0; y < n; ++y) {
-    if (adj[y].length === 0) continue;
-    const outY = new Set(adj[y]);
-    const extParents = [];
-    for (let u = 0; u < n; ++u) {
-      if (u !== y && !outY.has(u) && adj[u].includes(y)) extParents.push(u);
-    }
-    if (extParents.length === 0) return { y, u: null, kind: 'A0_bidirected_in' };
-    if (extParents.length === 1) {
-      const u = extParents[0];
-      const closedU = new Set([u, ...adj[u]]);
-      if (adj[y].every(w => closedU.has(w))) return { y, u, kind: 'A1_subsumed_child' };
-    }
-  }
-  return null;
+  const reduction = findLemmaA(adj);
+  if (reduction === null) return null;
+  const { y, u, kind } = reduction;
+  return { y, u, kind: kind === 'A0' ? 'A0_bidirected_in' : 'A1_subsumed_child' };
 }
 
 // Constructive 1-step witness selector for locally out-semicomplete digraphs (alpha+(D) <= 1).
@@ -269,9 +147,7 @@ export function buildQuasiKernelEnhanced(adj) {
   return solve(adj.map((_, i) => i), new Set());
 }
 
-// ============================================================================
 // 1. Verify Sharp Boundary Counterexamples to Local Inequalities
-// ============================================================================
 
 // (1a) Oriented K_{1,4}-free (21v: QR_7 + 14 private sinks): d+=5, alpha+=3, g <= 0 & g+ <= 0 everywhere!
 {
@@ -388,9 +264,7 @@ for (const [name, H] of [
   console.log(`Verified oriented K_{1,3}-free SSNC functor Phi(${name}) (${adj.length}v): exact formula holds, Lemma A => |Q|=${Q.length}/${adj.length}.`);
 }
 
-// ============================================================================
 // 2. Verify Positive Theorems: alpha+(D) <= 1, alpha+(D) <= 2 (M=0), and Class H
-// ============================================================================
 let rng = 20261127;
 const rand = () => { rng = (rng * 1664525 + 1013904223) >>> 0; return rng / 4294967296; };
 const randInt = k => Math.floor(rand() * k);

@@ -1,13 +1,12 @@
 import assert from 'node:assert/strict';
 import { bit, indices, referenceCore, size } from './clow-cores.mjs';
-import { isQuasiKernel } from './check.mjs';
+import { isQuasiKernel, transpose } from './check.mjs';
 
 // Bitsets are only used for finite replay. All labels are below 30.
 function graph(out) {
   assert.ok(out.length <= 30);
   const rows = out.map(row => row.reduce((mask, v) => mask | bit(v), 0));
-  const incoming = out.map(() => []);
-  out.forEach((row, v) => row.forEach(w => incoming[w].push(v)));
+  const incoming = transpose(out);
   const adj = rows.map((row, v) => incoming[v].reduce((m, w) => m | bit(w), row));
   return { rows, adj, incoming, all: bit(out.length) - 1 };
 }

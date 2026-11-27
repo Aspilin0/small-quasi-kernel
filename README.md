@@ -1,41 +1,41 @@
-# 小准核猜想研究
+# The small quasi-kernel conjecture
 
-Erdős–Székely 小准核猜想问：每张有限无源有向图，能否选出至多一半的顶点，使所选顶点两两之间没有弧，且从所选集合出发，两步以内能到达全图？这样的独立集称为**准核**。本仓库研究无自环、无重弧的图，允许双向边；下文以 $\Delta^+$ 记最大出度。
+[简体中文](README.zh-CN.md)
 
-**目前的主要成果是 $\Delta^+\le4$ 时半数界的证明稿。** 它覆盖任意点数，也覆盖没有汇点的图。一般猜想仍然开放。我们将组合证明、按定义检查准核的程序以及有限实例的 Lean 复核一并公开，供独立审读。文献优先权仍待核实。[出度四证明全文](匹配降度与出度四的小准核.md)
+A **quasi-kernel** is an independent set $Q$ from which every vertex is reachable in at most two steps along directed arcs. The Erdős–Székely conjecture asks whether every finite source-free digraph has such a set of size at most half its order. We work with simple digraphs, allowing opposite arcs between distinct vertices. We use $\Delta^+$ for maximum out-degree. Some papers take paths towards $Q$ and assume the digraph is sink-free. Reversing all arcs converts between the two conventions. [Clow, *Greedily Constructing Small Quasi-Kernels*](https://arxiv.org/html/2601.11847v1#S1)
 
-## 已得到的结果
+## The degree-four proof draft
 
-| 问题 | 结果与阅读入口 |
+The main proof draft establishes the half-order bound for $\Delta^+\le 4$, including graphs with sinks and graphs with no sinks. Among maximum matchings, it chooses one with the most matched pairs carrying a forward arc. As a result, the vertices that carry positive weight induce a digraph of maximum out-degree two. A quasi-kernel that covers at least half that weight within one step then yields a half-order quasi-kernel by matching counts. [Full proof in English](docs/degree-four.md) · [Chinese original](匹配降度与出度四的小准核.md)
+
+The argument adapts the matching count of Ai, Gutin, Liu and Meng. Ai, Gerke, Gutin, Yeo and Zhou established the degree-three half-order bound and asked about degree four in their reversed-arc convention. The general small quasi-kernel conjecture remains open. The degree-four argument is available for independent review, and priority in the literature remains to be checked. [Results on the small quasi-kernel conjecture](https://doi.org/10.1016/j.disc.2023.113435) · [Weighted transfer theorem](https://arxiv.org/html/2610.23487v1#S3)
+
+## Related results and experiments
+
+| Topic | Result |
 | --- | --- |
-| 最大出度 4 的小准核 | 在最大匹配中优先选择顺向边，使承担权重的顶点在其诱导子图中至多有两条出弧。由此找到覆盖至少一半权重的准核，再用匹配计数得到 $2\lvert Q\rvert\le\lvert V\rvert$。[匹配降度与出度四的小准核](匹配降度与出度四的小准核.md) |
-| 最大出度 3 的 Clow 局部不等式 | 删去一点 $v$ 及其出邻点后，令 $S(v)$ 为余图的源点集。证明稿给出同一个 $v$，使每个 $F\subseteq S(v)$ 都满足 $\lvert N^+(v)\cup N^+(F)\rvert\ge\lvert F\rvert+1$，包括允许双向边的情形。[Clow 5.1 证明](Clow-5.1-证明.md) |
-| 添加汇点后要补选多少点 | 固定核心准核后，必须补选的恰是两步仍不可达的汇点。这给出精确代价，并允许在反例搜索中把每个汇点的入度降为 1。对已知八点核心的任意有限覆盖，再接任意汇点，得到 $\lfloor n/4\rfloor$ 上界。[汇点延拓与独立根归纳](小准核的汇点延拓与独立根归纳.md) |
-| 无界出度下的局部结构 | 当每个出邻集中的任意两点之间都有弧时，证明稿给出强局部不等式；当出邻集的独立数上限放宽到 2 时，笔记给出部分正面结果和局部判据的反例。[禁出星图与相图](Clow-禁出星图与相图.md) |
+| Clow's local inequality at degree three | Delete $v$ and its out-neighbours and let $S(v)$ be the sources of the remaining digraph. The proof draft finds a single $v$ such that $\lvert N^+(v)\cup N^+(F)\rvert\ge \lvert F\rvert+1$ for every $F\subseteq S(v)$, including in digraphs with opposite arcs. [Proof draft in Chinese](Clow-5.1-证明.md) |
+| Extending across sinks | After choosing a quasi-kernel of the non-sink core, add exactly the sinks that it cannot reach in two steps. This gives an exact minimization formula and lets a search for counterexamples restrict sinks to in-degree one. The note also derives a $\lfloor n/4\rfloor$ bound for finite covers of a particular eight-vertex core with arbitrary sinks attached. [Proof and examples in Chinese](小准核的汇点延拓与独立根归纳.md) |
+| Local out-neighbourhood structure | The proof draft establishes the strong local inequality when every out-neighbourhood is semicomplete, even at unbounded out-degree. The verification scripts also check mixed degree and independence conditions and exhibit a 19-vertex oriented graph where the strengthened local gap is zero everywhere. That graph has a quasi-kernel of size two. [Structural results in Chinese](Clow-禁出星图与相图.md) · [Boundary examples and verifier](clow-classH-verify.mjs) |
+| Covers and arc subdivision | There are arbitrarily large examples with exactly one vertex witnessing Clow's inequality. Cover experiments compare how two roots behave under the same choice of lift. A separate note proves that inserting two vertices on an arc can extend a fixed quasi-kernel and gives a one-vertex failure example. [Unique witness](Clow-5.1-构造.md) · [Cover construction](Clow-5.1-覆盖与选点.md) · [Cover compatibility](Clow-5.1-覆盖的相容性.md) · [Arc subdivision](细分一条弧.md) (Chinese) |
 
-出度 3 的小准核半数界已有文献结果。Ai 等人也明确提出了度数 4 的问题；他们采用走向准核的方向，反转所有弧即得到本页的约定。Clow 提出的是局部不等式问题。出度四证明使用了 Ai、Gutin、Liu、Meng 的加权匹配计数。[Ai 等，2023](https://doi.org/10.1016/j.disc.2023.113435) · [Clow，猜想 5.1 与问题 5.2](https://arxiv.org/html/2601.11847v1#S5) · [加权转移定理](https://arxiv.org/html/2610.23487v1#S3)
+Clow's Conjecture 5.1 concerns the local inequality at degree three. Problem 5.2 asks about the local inequality at higher degrees. [Clow, Section 5](https://arxiv.org/html/2601.11847v1#S5)
 
-## 正在推进什么
+## Reproduce the finite checks
 
-1. **独立复核出度四证明。** 最值得检查的两处是最大匹配的换边论证，以及从候选准核删点后，两步可达性与点数估计能否同时保持。当前证明给出存在性，多项式时间构造仍待研究。
-2. **把匹配方法推进到出度 5。** 在证明中，$T$ 是承担正权重的顶点集，$f(c)$ 是分给 $c$ 的未匹配点数。由匹配伙伴与这些未匹配点互异，已有 $d^+_{D[T]}(c)+f(c)+1\le d_D^+(c)$。所以出度 5 时，只有权重为 1 的点可能在 $T$ 内有三条出弧。开放问题是：对匹配实际产生的这些权重，能否找到一个全图准核，使其一步以内覆盖至少一半权重？若成立，现有计数就能推出半数界。七点 Paley 锦标赛提供了检验新论证的边界实例。[出度五的障碍](匹配降度与出度四的小准核.md#边界与复核)
+Run these commands from the repository root. The JavaScript scripts use only the Node.js standard library and were checked with Node.js 24.
 
-## 如何复核
-
-在仓库根目录运行以下命令。JavaScript 验证器只用 Node.js 标准库，本次发布使用 Node.js 24。
-
-| 命令 | 检查内容 |
+| Command | What it checks |
 | --- | --- |
-| `node degree-four-verify.mjs` | 重放出度四证明的构造，并在完整图上检查准核。覆盖全部 2 至 5 点带标号无源简单有向图，共 761,804 张，其中 268,721 张最大出度恰为 4。 |
-| `node clow-proof-verify.mjs --full` | 核验出度三的局部见证点、双向边边界实例、核心枚举和准核构造。 |
-| `node sink-extension-verify.mjs` | 把汇点公式与直接枚举的最小值比较，重放独立根归纳及其障碍。 |
-| `node clow-k1d-verify.mjs` | 重放禁出星图的构造、局部差值、归约和有限搜索。 |
-| `node clow-classH-verify.mjs` | 检查混合度数条件下的见证点和准核构造，重放 19 点定向图等局部判据反例。 |
-| `node verify.mjs` | 检查细分一条弧后的准核延拓，共 67,600 次。 |
+| `node degree-four-verify.mjs` | Replays the degree-four construction and checks the resulting quasi-kernel on every labelled source-free simple digraph on two to five vertices. The 761,804 graphs include 268,721 of maximum out-degree exactly four. |
+| `node clow-proof-verify.mjs --full` | Checks degree-three witnesses, examples with opposite arcs, finite core enumerations, and the quasi-kernel construction. |
+| `node sink-extension-verify.mjs` | Compares the sink extension formula with directly enumerated minima and replays the independent-root induction examples. |
+| `node clow-k1d-verify.mjs` | Checks out-neighbourhood independence restrictions, local gaps, reductions, and finite examples. |
+| `node clow-classH-verify.mjs` | Checks local witnesses and quasi-kernels under mixed degree and independence conditions and replays explicit counterexamples to the local criteria. |
+| `node verify.mjs` | Checks 67,600 quasi-kernel extensions under arc subdivision. This experiment uses paths towards the quasi-kernel. |
+| `lean lean/Clow51.lean` | Uses Lean 4's core library to check the finite family with cycle lengths 3 through 40, a 24-vertex local obstruction, and the three-vertex core enumeration. [Lean source](lean/Clow51.lean) |
 
-[Lean 4 文件](lean/Clow51.lean)使用核心库，复核环长 3 至 40 的构造、24 点局部反例及三点核心的枚举。安装 Lean 4 后可运行 `lean lean/Clow51.lean`。出度四的一般性论证见上面的数学证明稿。
+## Open questions from the proof draft
 
-## 早期构造与实验
-
-- [唯一见证点构造](Clow-5.1-构造.md)给出任意规模、恰有一点满足局部不等式的图。[覆盖与选点](Clow-5.1-覆盖与选点.md)和[覆盖的相容性](Clow-5.1-覆盖的相容性.md)研究同一底图上不同根的最优接线能否同时实现。
-- [细分一条弧](细分一条弧.md)记录最初的边界延拓实验。这篇笔记采用走向准核的反向约定，保留了完整证明、单点细分的失败例及枚举数据。
+- At degree four, can the half-order bound be made constructive in polynomial time? The proof uses a maximum independent set to define the matching.
+- At degree five, can a quasi-kernel cover at least half the matching weight within one step? Only weight-one vertices can have three out-neighbours in the positive-weight support. The seven-vertex Paley tournament shows that the two-part kernel-perfect partition from the degree-four proof cannot cover every such support. [Degree-five obstacle](docs/degree-four.md#sharpness-the-degree-five-obstacle-and-verification)

@@ -2,42 +2,14 @@ import assert from 'node:assert/strict';
 import { allCores, attachments, indices, orbitFilter, size } from './clow-cores.mjs';
 import { inspect } from './clow-check.mjs';
 import { checkRealizations } from './clow-minima.mjs';
+import { verifySmallQuasiKernel } from './check.mjs';
+import { exactLstar as enumerateLstar, sourcesAfterDeletingClosedOut } from './clow-local.mjs';
 
-// Independent brute-force computation of L*(v) = min_{F subset S(v)} (|A(v) U N+(F)| - |F|).
-// Because max out-degree <= 3, |S(v)| <= 9 always, so enumerating all 2^|S(v)| subsets is exact.
+export { verifySmallQuasiKernel };
+
+// At maximum out-degree 3, the source set has at most nine vertices.
 export function exactLstar(adj, v) {
-  const n = adj.length;
-  const del = new Uint8Array(n);
-  del[v] = 1;
-  for (const a of adj[v]) del[a] = 1;
-  const hasParent = new Uint8Array(n);
-  for (let u = 0; u < n; ++u) {
-    if (del[u]) continue;
-    for (const w of adj[u]) hasParent[w] = 1;
-  }
-  const S = [];
-  for (let u = 0; u < n; ++u) if (!del[u] && !hasParent[u]) S.push(u);
-  assert.ok(S.length <= 9, `Expected |S(v)| <= 9, got ${S.length}`);
-
-  let bestGap = Infinity, bestF = [];
-  const k = S.length;
-  for (let mask = 0; mask < (1 << k); ++mask) {
-    const E = new Set(adj[v]);
-    let fSize = 0;
-    for (let i = 0; i < k; ++i) {
-      if (mask & (1 << i)) {
-        ++fSize;
-        for (const w of adj[S[i]]) E.add(w);
-      }
-    }
-    const gap = E.size - fSize;
-    if (gap < bestGap || (gap === bestGap && fSize < bestF.length)) {
-      bestGap = gap;
-      bestF = [];
-      for (let i = 0; i < k; ++i) if (mask & (1 << i)) bestF.push(S[i]);
-    }
-  }
-  return { gap: bestGap, F: bestF, S };
+  return enumerateLstar(adj, v, 9);
 }
 
 // Independent validator for a general sourceless simple digraph (2-cycles allowed, no self-loops).
@@ -54,13 +26,7 @@ export function inspectGeneral(adj, degreeLimit = 3) {
   }
   for (let u = 0; u < n; ++u) assert.ok(indeg[u] >= 1, `Vertex ${u} is a source`);
   return adj.map((row, v) => {
-    const del = new Uint8Array(n);
-    del[v] = 1;
-    for (const a of row) del[a] = 1;
-    const hasParent = new Uint8Array(n);
-    for (let u = 0; u < n; ++u) if (!del[u]) for (const w of adj[u]) hasParent[w] = 1;
-    const S = [];
-    for (let u = 0; u < n; ++u) if (!del[u] && !hasParent[u]) S.push(u);
+    const S = sourcesAfterDeletingClosedOut(adj, v);
     const E = new Set(row);
     for (const s of S) for (const w of adj[s]) E.add(w);
     return { v, S, E: [...E], gap: E.size - S.length };
@@ -203,27 +169,6 @@ export function buildSmallQuasiKernel(adj) {
     return (sHitsV || qHitsV) ? [...globalS, ...Qp] : [verts[v], ...globalS, ...Qp];
   }
   return solve(adj.map((_, i) => i), new Set());
-}
-
-// Independent verifier of independence, 2-step reachability, and 2|Q| <= |V|.
-export function verifySmallQuasiKernel(adj, Q) {
-  const n = adj.length;
-  const qSet = new Set(Q);
-  assert.equal(qSet.size, Q.length, 'Duplicate vertex in Q');
-  assert.ok(2 * Q.length <= n, `Quasi-kernel too large: 2*${Q.length} > ${n}`);
-  for (const u of Q) {
-    assert.ok(Number.isInteger(u) && u >= 0 && u < n);
-    for (const w of adj[u]) assert.ok(!qSet.has(w), `Arc ${u}->${w} inside Q`);
-  }
-  const dist = new Int8Array(n).fill(3);
-  for (const u of Q) dist[u] = 0;
-  for (const u of Q) {
-    for (const w of adj[u]) {
-      if (dist[w] > 1) dist[w] = 1;
-      for (const x of adj[w]) if (dist[x] > 2) dist[x] = 2;
-    }
-  }
-  for (let u = 0; u < n; ++u) assert.ok(dist[u] <= 2, `Vertex ${u} not reached in <= 2 steps`);
 }
 
 function addTournamentHub(adj, extraOut) {

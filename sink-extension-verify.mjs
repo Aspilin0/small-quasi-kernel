@@ -1,14 +1,7 @@
 import assert from 'node:assert/strict';
-import { isQuasiKernel } from './check.mjs';
+import { isQuasiKernel, transpose } from './check.mjs';
 import { inspect } from './clow-check.mjs';
 import { indices, referenceCore } from './clow-cores.mjs';
-
-// check.mjs uses paths towards Q. Transpose once to check paths from Q.
-function transpose(out) {
-  const incoming = out.map(() => []);
-  out.forEach((row, v) => row.forEach(w => incoming[w].push(v)));
-  return incoming;
-}
 
 function closedOut(out, chosen) {
   return new Set([...chosen, ...chosen.flatMap(v => out[v])]);
